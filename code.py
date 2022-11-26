@@ -458,5 +458,162 @@ d_data6=d_data6.rename(columns={'Unnamed: 0':'date'})
 d_data6.dropna(subset=['pi'],inplace=True,axis=0)
 d_data6
 
+def r_rolling_rf(dt,b_d,e_d):
+    ####滚动回归
+    #开始滚动，按照预测区间设计 range范围
+    ####这里我们做了以下处理：
+    #因为要取第一列的数，所以我们需要先取到时间这一列
+    time=dt.iloc[:,0]
+    #检查
+    time
+    #取第一列变量做成列表
+    col=time.tolist()
+    ##新循环函数代码设计
+    ##问题1：一个是循环函数怎么输出没搞完
+    ##问题2：还有一个是移动求和做累计值哪里，sum不知道该怎么对整体用，这里还没有做
+    ##思路：目前是需要分成两个部分：第一部分是先嵌套上h，做滞后项，然后再嵌套回测函数；第二部分是先做累积值的三个表格，然后分别对他们进行滞后项为0的滚动回测。
+    for i in range(e_d-b_d+1):
+        #样本内窗口初始为60-89，一共30年，设为train_range
+        train_range=360
+        #取训练集的数据
+        train_X=dt.iloc[train_range-360+i:train_range+i,2:]
+        train_y=dt.iloc[train_range-360+i:train_range+i,1]
+        #对测试集数据范围进行定义
+        test_X=dt.iloc[train_range+i+1:739,2:]
+        test_y=dt.iloc[train_range+i+1:739,1]
+        #对训练集进行随机森林拟合处理
+        #以及通过随机森林筛选最优变量
+        #这里用极端随机森林
+        rf_train=ExtraTreesRegressor()
+        #这个原始用的是普通随机森林，普通随机森林模型构建的分裂结点是随机选取的特征，这里我们要用极端随机森林，也就是构建树的时候，不会任意选取特征，而是先随机收集一部分特征，然后利用信息熵、基尼指数挑选最佳结点特征。
+        #普通随机：rf_train=RandomForestRegressor(max_depth=2, random_state=0)
+        rf_train.fit(train_X,train_y)##regr.fit(data_feature,data_target)
+         #进行变量重要性筛选，对变量贡献度进行打分
+        importance = rf_train.feature_importances_
+        indices = np.argsort(importance)[::-1]
+        features = train_X.columns
+        ##导出打分结果
+        test = pd.DataFrame(importance,features)
+        test.to_csv(r'C:\Users\lhm20\r_rollingrf-acc6-importance.csv',encoding = 'gbk')
+        #print得出，更加的直观一些
+        #for f in range(train_X.shape[1]):
+        #    print(("%2d) %-*s %f" % (f + 1, 30, features[f], importance[indices[f]])))
+        ##选择前20个最优变量
+        n_num=20##根据需要，选择要留几个特征值
+        model=SelectFromModel(rf_train,prefit=True,max_features=n_num,threshold=-np.inf)
+        dt_feature_new=pd.DataFrame(model.transform(train_X))
+        #返回被筛选得到的特征值在文中的位置test1
+        test1=model.get_support(indices=True)
+        test = pd.DataFrame(dt_feature_new,test1)
+        test.to_csv(r'C:\Users\lhm20\r_rollingRF-acc6-筛选变量.csv',encoding = 'gbk')
+        #对训练集进行预测
+        test_pi=rf_train.predict(test_X)
+        return(test_pi)
+    
+##调用函数
+begin_date='1/1/1990'
+end_date='7/1/2021'
+b_d=col.index(begin_date)
+e_d=col.index(end_date)
+
+pre=r_rolling_rf(d_data6,b_d,e_d)
+##看一下自己的数据什么情况
+pre
+
+#没有问题的话，进行输出
+test = pd.DataFrame(pre)
+test.to_csv(r'C:\Users\lhm20\t_testpi-ver6.csv',encoding = 'gbk')
+
+##acc=12
+import pandas as pd
+import numpy as np
+from sklearn.svm import SVR
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.datasets import make_regression
+
+#由于在文件‘1960-2021-ver12.csv’生成后，手动修改上挪11行的文件未单独另存为，直接在原表修改，则此处重新导入一次数据
+d_data12=pd.read_csv(r'C:\Users\lhm20\1960-2021-ver12.csv')
+d_data12
+
+##更改列名
+#df.rename(columns={'旧列名':'新列名'})
+d_data12=d_data12.rename(columns={'Unnamed: 0':'date'})
+
+##删除行：drop(),axis=1删除列，axis=0删除行
+#各种删除的函数可以参考：https://mp.weixin.qq.com/s?src=11&timestamp=1638672957&ver=3477&signature=rxO*QMcjp6dUXdIJ*qYxw*qpo77QtsOSf3e1I5AGjp7kcoFKm2pmd87*a-Nleo3*XPPWglMymSE2foKYTfi3zxSmJ7dyqCYr4-xuA6mXSKdG6c20tE9s-ff*bJOcq9xY&new=1
+#此处删除由于移动求和导致的变量为空值的情况
+d_data12.dropna(subset=['pi'],inplace=True,axis=0)
+d_data12
+
+def r_rolling_rf(dt,b_d,e_d):
+    ####滚动回归
+    #开始滚动，按照预测区间设计 range范围
+    ####这里我们做了以下处理：
+    #因为要取第一列的数，所以我们需要先取到时间这一列
+    time=dt.iloc[:,0]
+    #检查
+    time
+    #取第一列变量做成列表
+    col=time.tolist()
+    ##新循环函数代码设计
+    ##问题1：一个是循环函数怎么输出没搞完
+    ##问题2：还有一个是移动求和做累计值哪里，sum不知道该怎么对整体用，这里还没有做
+    ##思路：目前是需要分成两个部分：第一部分是先嵌套上h，做滞后项，然后再嵌套回测函数；第二部分是先做累积值的三个表格，然后分别对他们进行滞后项为0的滚动回测。
+    for i in range(e_d-b_d+1):
+        #样本内窗口初始为60-89，一共30年，设为train_range
+        train_range=360
+        #取训练集的数据
+        train_X=dt.iloc[train_range-360+i:train_range+i,2:]
+        train_y=dt.iloc[train_range-360+i:train_range+i,1]
+        #对测试集数据范围进行定义
+        test_X=dt.iloc[train_range+i+1:733,2:]
+        test_y=dt.iloc[train_range+i+1:733,1]
+        #对训练集进行随机森林拟合处理
+        #以及通过随机森林筛选最优变量
+         #这里用极端随机森林
+        rf_train=ExtraTreesRegressor()
+        #这个原始用的是普通随机森林，普通随机森林模型构建的分裂结点是随机选取的特征，这里我们要用极端随机森林，也就是构建树的时候，不会任意选取特征，而是先随机收集一部分特征，然后利用信息熵、基尼指数挑选最佳结点特征。
+        #普通随机：rf_train=RandomForestRegressor(max_depth=2, random_state=0)
+        rf_train.fit(train_X,train_y)##regr.fit(data_feature,data_target)
+         #进行变量重要性筛选，对变量贡献度进行打分
+        importance = rf_train.feature_importances_
+        indices = np.argsort(importance)[::-1]
+        features = train_X.columns
+        ##导出打分结果
+        test = pd.DataFrame(importance,features)
+        test.to_csv(r'C:\Users\lhm20\r_rollingrf-acc12-importance.csv',encoding = 'gbk')
+        #print得出，更加的直观一些
+        #for f in range(train_X.shape[1]):
+        #    print(("%2d) %-*s %f" % (f + 1, 30, features[f], importance[indices[f]])))
+        ##选择前20个最优变量
+        n_num=20##根据需要，选择要留几个特征值
+        model=SelectFromModel(rf_train,prefit=True,max_features=n_num,threshold=-np.inf)
+        dt_feature_new=pd.DataFrame(model.transform(train_X))
+        #返回被筛选得到的特征值在文中的位置test1
+        test1=model.get_support(indices=True)
+        test = pd.DataFrame(dt_feature_new,test1)
+        test.to_csv(r'C:\Users\lhm20\r_rollingRF-acc12-筛选变量.csv',encoding = 'gbk')
+        #对训练集进行预测
+        test_pi=rf_train.predict(test_X)
+        return(test_pi)
+    
+##调用函数
+begin_date='1/1/1990'
+end_date='1/1/2021'
+b_d=col.index(begin_date)
+e_d=col.index(end_date)
+
+pre=r_rolling_rf(d_data12,b_d,e_d)
+##看一下自己的数据什么情况
+pre
+
+#没有问题的话，进行输出
+test = pd.DataFrame(pre)
+test.to_csv(r'C:\Users\lhm20\t_testpi-ver12.csv',encoding = 'gbk')  
+
+##手动修改'testpi.csv'，另存为't_testpi.csv'(数据期间为1/1/1990-12/1/2021)
+t_testpi=pd.read_csv(r'C:\Users\lhm20\t_testpi.csv')
+t_testpi
+
 
 
