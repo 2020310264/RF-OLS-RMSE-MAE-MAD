@@ -614,6 +614,3 @@ test.to_csv(r'C:\Users\lhm20\t_testpi-ver12.csv',encoding = 'gbk')
 ##手动修改'testpi.csv'，另存为't_testpi.csv'(数据期间为1/1/1990-12/1/2021)
 t_testpi=pd.read_csv(r'C:\Users\lhm20\t_testpi.csv')
 t_testpi
-
-
-
